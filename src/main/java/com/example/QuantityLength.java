@@ -102,12 +102,24 @@ public class QuantityLength<U extends IMeasurable> {
 	}
 
 	private double performArithmetic(QuantityLength<? extends IMeasurable> other, ArithmeticOperation operation) {
-		double baseThis = this.unit.convertToBaseUnit(this.value);
-		double baseOther = other.getUnit().convertToBaseUnit(other.getValue());
-		return operation.compute(baseThis, baseOther);
+		 // Validate operation support on both units before any conversion
+        this.unit.validateOperationSupport(operation.name());
+        other.getUnit().validateOperationSupport(operation.name());
+
+        // For division, require both units to explicitly support arithmetic
+        if (operation == ArithmeticOperation.DIVIDE) {
+            if (!this.unit.supportsArithmetic() || !other.getUnit().supportsArithmetic()) {
+                throw new UnsupportedOperationException(
+                        "Division not supported for unit type: " + this.unit.getClass().getSimpleName());
+            }
+        }
+
+        double baseThis = this.unit.convertToBaseUnit(this.value);
+        double baseOther = other.getUnit().convertToBaseUnit(other.getValue());
+        return operation.compute(baseThis, baseOther);
 	}
 	
-	public QuantityLength<U> add(QuantityLength<U> thatLength) {
+	public QuantityLength<U> add(QuantityLength<? extends IMeasurable> thatLength) {
 		validateArithmeticOperands(thatLength, this.unit, false);
 		double baseResult = performArithmetic(thatLength, ArithmeticOperation.ADD);
 		double resultInThisUnit = this.unit.convertFromBaseUnit(baseResult);
@@ -115,15 +127,18 @@ public class QuantityLength<U extends IMeasurable> {
 		return new QuantityLength<>(rounded, this.unit);
 	}
 	
-	public QuantityLength<U> add(QuantityLength<U> thatLength, U targetUnit) {
-		validateArithmeticOperands(thatLength, targetUnit, true);
-		double baseResult = performArithmetic(thatLength, ArithmeticOperation.ADD);
-		double resultInTarget = targetUnit.convertFromBaseUnit(baseResult);
-		double rounded = Math.round(resultInTarget * ROUND_SCALE) / ROUND_SCALE;
-		return new QuantityLength<>(rounded, targetUnit);
+	public QuantityLength<U> add(QuantityLength<? extends IMeasurable> other, U targetUnit) {
+		validateArithmeticOperands(other, targetUnit, true);
+        // validate target unit supports the operation
+        targetUnit.validateOperationSupport(ArithmeticOperation.ADD.name());
+
+        double baseResult = performArithmetic(other, ArithmeticOperation.ADD);
+        double resultInTarget = targetUnit.convertFromBaseUnit(baseResult);
+        double rounded = Math.round(resultInTarget * ROUND_SCALE) / ROUND_SCALE;
+        return new QuantityLength<>(rounded, targetUnit);
 	}
 
-	public QuantityLength<U> subtract(QuantityLength<U> other) {
+	public QuantityLength<U> subtract(QuantityLength<? extends IMeasurable> other) {
 		validateArithmeticOperands(other, this.unit, false);
 		double baseResult = performArithmetic(other, ArithmeticOperation.SUBTRACT);
 		double resultInThisUnit = this.unit.convertFromBaseUnit(baseResult);
@@ -131,15 +146,17 @@ public class QuantityLength<U extends IMeasurable> {
 		return new QuantityLength<>(rounded, this.unit);
 	}
 
-	public QuantityLength<U> subtract(QuantityLength<U> other, U targetUnit) {
-		validateArithmeticOperands(other, targetUnit, true);
-		double baseResult = performArithmetic(other, ArithmeticOperation.SUBTRACT);
-		double resultInTarget = targetUnit.convertFromBaseUnit(baseResult);
-		double rounded = Math.round(resultInTarget * ROUND_SCALE) / ROUND_SCALE;
-		return new QuantityLength<>(rounded, targetUnit);
+	public QuantityLength<U> subtract(QuantityLength<? extends IMeasurable> other, U targetUnit) {
+		 validateArithmeticOperands(other, targetUnit, true);
+	        targetUnit.validateOperationSupport(ArithmeticOperation.SUBTRACT.name());
+
+	        double baseResult = performArithmetic(other, ArithmeticOperation.SUBTRACT);
+	        double resultInTarget = targetUnit.convertFromBaseUnit(baseResult);
+	        double rounded = Math.round(resultInTarget * ROUND_SCALE) / ROUND_SCALE;
+	        return new QuantityLength<>(rounded, targetUnit);
 	}
 
-	public double divide(QuantityLength<U> other) {
+	public double divide(QuantityLength<? extends IMeasurable> other) {
 		validateArithmeticOperands(other, null, false);
 		return performArithmetic(other, ArithmeticOperation.DIVIDE);
 	}
