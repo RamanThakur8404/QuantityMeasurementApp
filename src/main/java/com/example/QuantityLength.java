@@ -1,10 +1,32 @@
 package com.example;
 
+import java.util.function.DoubleBinaryOperator;
+
 public class QuantityLength<U extends IMeasurable> {
 	private final double value;
 	private final U unit;
 	private static final double EPSILON = 1e-6;
 	private static final double ROUND_SCALE = 1e6;
+	
+	private enum ArithmeticOperation {
+
+		ADD((a, b) -> a + b), SUBTRACT((a, b) -> a - b), DIVIDE((a, b) -> {
+			if (b == 0.0)
+				throw new ArithmeticException("Division by zero");
+			return a / b;
+		});
+
+		private final DoubleBinaryOperator op;
+
+		ArithmeticOperation(DoubleBinaryOperator op) {
+			this.op = op;
+		}
+
+		public double compute(double a, double b) {
+			return op.applyAsDouble(a, b);
+		}
+	}
+
 	
 	// Constructor to initialize length value and unit
 	public QuantityLength(double value, U unit) {
@@ -57,96 +79,69 @@ public class QuantityLength<U extends IMeasurable> {
 
 		return new QuantityLength<>(converted, targetUnit);
 	}
-	public QuantityLength<U> add(QuantityLength<U> thatLength) {
-		if(thatLength == null) {
-			throw new IllegalArgumentException("Second oprend null");
-		}
-		
-		double base1 = unit.convertToBaseUnit(value);
-		double base2 = thatLength.unit.convertToBaseUnit(thatLength.value);
-		
-		double sumBase = base1 + base2;
-		
-		double result = unit.convertFromBaseUnit(sumBase);
-		return new QuantityLength(result,unit);
-	}
 	
-	public QuantityLength<U> add(QuantityLength<U> thatLength, U targetUnit) {
-		if(thatLength == null || targetUnit == null) {
-			throw new IllegalArgumentException();
-		}
-		if(!Double.isFinite(this.value) || !Double.isFinite(thatLength.value)) {
-	    	throw new IllegalArgumentException("Values must be a finite number");
-	    }
-		
-		double base1 = unit.convertToBaseUnit(value);
-		double base2 = thatLength.unit.convertToBaseUnit(thatLength.value);
-		
-		double sumBase = base1 + base2;
-		
-		double result = targetUnit.convertFromBaseUnit(sumBase);
-		return new QuantityLength<>(result,targetUnit);
-	}
-
-	private void validateOperand(QuantityLength<U> other) {
+	private void validateArithmeticOperands(QuantityLength<? extends IMeasurable> other, IMeasurable targetUnit,boolean targetUnitRequired) {
 		if (other == null) {
 			throw new IllegalArgumentException("Other quantity must not be null");
 		}
-		if (this.unit == null || other.unit == null) {
+		if (this.unit == null || other.getUnit() == null) {
 			throw new IllegalArgumentException("Unit must not be null");
 		}
-		if (Double.isNaN(this.value) || Double.isInfinite(this.value) || 
-			Double.isNaN(other.value) || Double.isInfinite(other.value)) {
+		if (!Double.isFinite(this.value) || !Double.isFinite(other.getValue())) {
 			throw new IllegalArgumentException("Values must be finite numbers");
 		}
-		if (this.unit.getClass() != other.unit.getClass()) {
+		if (this.unit.getClass() != other.getUnit().getClass()) {
 			throw new IllegalArgumentException("Cannot operate across different measurement categories");
+		}
+		if (targetUnitRequired && targetUnit == null) {
+			throw new IllegalArgumentException("Target unit must not be null");
+		}
+		if (targetUnit != null && targetUnit.getClass() != this.unit.getClass()) {
+			throw new IllegalArgumentException("Target unit must belong to same measurement category");
 		}
 	}
 
-	public QuantityLength<U> subtract(QuantityLength<U> other) {
-		validateOperand(other);
-		
+	private double performArithmetic(QuantityLength<? extends IMeasurable> other, ArithmeticOperation operation) {
 		double baseThis = this.unit.convertToBaseUnit(this.value);
-		double baseOther = other.unit.convertToBaseUnit(other.value);
-		double baseResult = baseThis - baseOther;
+		double baseOther = other.getUnit().convertToBaseUnit(other.getValue());
+		return operation.compute(baseThis, baseOther);
+	}
+	
+	public QuantityLength<U> add(QuantityLength<U> thatLength) {
+		validateArithmeticOperands(thatLength, this.unit, false);
+		double baseResult = performArithmetic(thatLength, ArithmeticOperation.ADD);
 		double resultInThisUnit = this.unit.convertFromBaseUnit(baseResult);
-		
+		double rounded = Math.round(resultInThisUnit * ROUND_SCALE) / ROUND_SCALE;
+		return new QuantityLength<>(rounded, this.unit);
+	}
+	
+	public QuantityLength<U> add(QuantityLength<U> thatLength, U targetUnit) {
+		validateArithmeticOperands(thatLength, targetUnit, true);
+		double baseResult = performArithmetic(thatLength, ArithmeticOperation.ADD);
+		double resultInTarget = targetUnit.convertFromBaseUnit(baseResult);
+		double rounded = Math.round(resultInTarget * ROUND_SCALE) / ROUND_SCALE;
+		return new QuantityLength<>(rounded, targetUnit);
+	}
+
+	public QuantityLength<U> subtract(QuantityLength<U> other) {
+		validateArithmeticOperands(other, this.unit, false);
+		double baseResult = performArithmetic(other, ArithmeticOperation.SUBTRACT);
+		double resultInThisUnit = this.unit.convertFromBaseUnit(baseResult);
 		double rounded = Math.round(resultInThisUnit * ROUND_SCALE) / ROUND_SCALE;
 		return new QuantityLength<>(rounded, this.unit);
 	}
 
 	public QuantityLength<U> subtract(QuantityLength<U> other, U targetUnit) {
-		validateOperand(other);
-		
-		if (targetUnit == null) {
-			throw new IllegalArgumentException("Target unit cannot be null");
-		}
-		
-		if (targetUnit.getClass() != this.unit.getClass()) {
-			throw new IllegalArgumentException("Target unit must belong to same measurement category");
-		}
-		
-		double baseThis = this.unit.convertToBaseUnit(this.value);
-		double baseOther = other.unit.convertToBaseUnit(other.value);
-		double baseResult = baseThis - baseOther;
+		validateArithmeticOperands(other, targetUnit, true);
+		double baseResult = performArithmetic(other, ArithmeticOperation.SUBTRACT);
 		double resultInTarget = targetUnit.convertFromBaseUnit(baseResult);
-		
 		double rounded = Math.round(resultInTarget * ROUND_SCALE) / ROUND_SCALE;
 		return new QuantityLength<>(rounded, targetUnit);
 	}
 
 	public double divide(QuantityLength<U> other) {
-		validateOperand(other);
-		
-		double baseThis = this.unit.convertToBaseUnit(this.value);
-		double baseOther = other.unit.convertToBaseUnit(other.value);
-		
-		if (baseOther == 0.0) {
-			throw new ArithmeticException("Division by zero QuantityLength");
-		}
-		
-		return baseThis / baseOther;
+		validateArithmeticOperands(other, null, false);
+		return performArithmetic(other, ArithmeticOperation.DIVIDE);
 	}
 	
 	
