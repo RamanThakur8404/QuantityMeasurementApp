@@ -1,4 +1,4 @@
-package com.example.model;
+package com.app.quantitymeasurement.entity;
 public class QuantityModel {
 
     private double value;

@@ -1,4 +1,4 @@
-package com.example.entity;
+package com.app.quantitymeasurement.entity;
 import java.io.Serializable;
 
 public class QuantityMeasurementEntity implements Serializable {

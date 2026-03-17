@@ -1,8 +1,8 @@
-package com.example.app;
-import com.example.controller.QuantityMeasurementController;
-import com.example.repository.QuantityMeasurementCacheRepository;
-import com.example.service.IQuantityMeasurementService;
-import com.example.service.QuantityMeasurementServiceImpl;
+package com.app.quantitymeasurement;
+import com.app.quantitymeasurement.controller.QuantityMeasurementController;
+import com.app.quantitymeasurement.repository.QuantityMeasurementCacheRepository;
+import com.app.quantitymeasurement.service.IQuantityMeasurementService;
+import com.app.quantitymeasurement.service.QuantityMeasurementServiceImpl;
 
 public class QuantityMeasurementApp {
 
