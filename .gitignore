@@ -1,0 +1,44 @@
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Spring Boot
+HELP.md
+
+# Logs
+*.log
+
+# IDE - Eclipse / STS
+.project
+.classpath
+.factorypath
+.settings/
+
+# IntelliJ
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+
+# Maven Wrapper binaries (optional)
+mvnw.cmd
+mvnw
+
+# Dump folder (as UC17 mentioned)
+dump/
+
+# H2 database files (if file based)
+*.mv.db
+*.trace.db
+
+# Do not push
+.gitattributes
+.mvn/
