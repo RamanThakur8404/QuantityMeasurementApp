@@ -4,15 +4,19 @@ import java.util.function.DoubleBinaryOperator;
 import com.app.quantitymeasurement.unit.IMeasurable;
 import com.app.quantitymeasurement.unit.SupportsArithmetic;
 
+/**
+ * Immutable model representing a value with a unit.
+ * Supports comparison, conversion, and arithmetic operations.
+ */
 public final class Quantity<U extends IMeasurable> {
 
     private final double value;
     private final U unit;
 
-    private static final double EPSILON = 1e-6;     // comparison tolerance
-    private static final double ROUND_SCALE = 1e6;  // rounding scale
+    private static final double EPSILON = 1e-6;
+    private static final double ROUND_SCALE = 1e6;
 
-    // internal operations
+    // ===== Arithmetic Enum =====
     private enum ArithmeticOperation {
         ADD((a, b) -> a + b),
         SUBTRACT((a, b) -> a - b),
@@ -32,49 +36,43 @@ public final class Quantity<U extends IMeasurable> {
         }
     }
 
-    // constructor
+    // ===== Constructor =====
     public Quantity(double value, U unit) {
         if (unit == null) throw new IllegalArgumentException("Unit cannot be null");
-        if (!Double.isFinite(value)) throw new IllegalArgumentException("Value must be finite");
+        if (!Double.isFinite(value)) throw new IllegalArgumentException("Invalid value");
         this.value = value;
         this.unit = unit;
     }
 
+    // ===== Getters =====
     public double getValue() { return value; }
     public U getUnit() { return unit; }
 
-    // equality check (base unit comparison)
+    // ===== Equality =====
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Quantity<?> other)) return false;
-        if (this.unit.getClass() != other.unit.getClass()) return false;
+        if (unit.getClass() != other.unit.getClass()) return false;
 
-        double thisBase = unit.convertToBaseUnit(value);
-        double otherBase = other.unit.convertToBaseUnit(other.value);
+        double base1 = unit.convertToBaseUnit(value);
+        double base2 = other.unit.convertToBaseUnit(other.value);
 
-        return Math.abs(thisBase - otherBase) < EPSILON;
+        return Math.abs(base1 - base2) < EPSILON;
     }
 
-    // unit conversion
+    // ===== Conversion =====
     public Quantity<U> convertTo(U targetUnit) {
         validateTargetUnit(targetUnit);
-
-        double baseValue = unit.convertToBaseUnit(value);
-        double converted = targetUnit.convertFromBaseUnit(baseValue);
-
-        return new Quantity<>(converted, targetUnit);
+        double base = unit.convertToBaseUnit(value);
+        return new Quantity<>(targetUnit.convertFromBaseUnit(base), targetUnit);
     }
 
-    // -------- arithmetic --------
-
+    // ===== Arithmetic =====
     public Quantity<U> add(Quantity<? extends IMeasurable> other) {
         validateQuantity(other);
-
-        return new Quantity<>(
-                round(unit.convertFromBaseUnit(
-                        performArithmetic(other, ArithmeticOperation.ADD))),
-                unit);
+        return new Quantity<>(round(unit.convertFromBaseUnit(
+                performArithmetic(other, ArithmeticOperation.ADD))), unit);
     }
 
     public Quantity<U> add(Quantity<? extends IMeasurable> other, U targetUnit) {
@@ -82,19 +80,14 @@ public final class Quantity<U extends IMeasurable> {
         validateTargetUnit(targetUnit);
         validateArithmeticSupport(targetUnit);
 
-        return new Quantity<>(
-                round(targetUnit.convertFromBaseUnit(
-                        performArithmetic(other, ArithmeticOperation.ADD))),
-                targetUnit);
+        return new Quantity<>(round(targetUnit.convertFromBaseUnit(
+                performArithmetic(other, ArithmeticOperation.ADD))), targetUnit);
     }
 
     public Quantity<U> subtract(Quantity<? extends IMeasurable> other) {
         validateQuantity(other);
-
-        return new Quantity<>(
-                round(unit.convertFromBaseUnit(
-                        performArithmetic(other, ArithmeticOperation.SUBTRACT))),
-                unit);
+        return new Quantity<>(round(unit.convertFromBaseUnit(
+                performArithmetic(other, ArithmeticOperation.SUBTRACT))), unit);
     }
 
     public Quantity<U> subtract(Quantity<? extends IMeasurable> other, U targetUnit) {
@@ -102,70 +95,56 @@ public final class Quantity<U extends IMeasurable> {
         validateTargetUnit(targetUnit);
         validateArithmeticSupport(targetUnit);
 
-        return new Quantity<>(
-                round(targetUnit.convertFromBaseUnit(
-                        performArithmetic(other, ArithmeticOperation.SUBTRACT))),
-                targetUnit);
+        return new Quantity<>(round(targetUnit.convertFromBaseUnit(
+                performArithmetic(other, ArithmeticOperation.SUBTRACT))), targetUnit);
     }
 
-    // division returns ratio
     public double divide(Quantity<? extends IMeasurable> other) {
         validateQuantity(other);
         return performArithmetic(other, ArithmeticOperation.DIVIDE);
     }
 
-    // hash based on base unit
+    // ===== Utility =====
     @Override
     public int hashCode() {
         long normalized = Math.round(unit.convertToBaseUnit(value) / EPSILON);
         return Long.hashCode(normalized);
     }
 
-    // formatted output
     @Override
     public String toString() {
-        return String.format("%s %s",
-                Double.toString(value).replaceAll("\\.0+$", ""),
-                unit.getUnitName());
+        return value + " " + unit.getUnitName();
     }
 
-    // -------- validations --------
-
+    // ===== Validation =====
     private void validateQuantity(Quantity<? extends IMeasurable> other) {
-        if (other == null)
-            throw new IllegalArgumentException("Other quantity must not be null");
-
-        if (!Double.isFinite(this.value) || !Double.isFinite(other.getValue()))
-            throw new IllegalArgumentException("Values must be finite");
-
-        if (this.unit.getClass() != other.getUnit().getClass())
-            throw new IllegalArgumentException("Different measurement types not allowed");
+        if (other == null) throw new IllegalArgumentException("Other cannot be null");
+        if (unit.getClass() != other.getUnit().getClass())
+            throw new IllegalArgumentException("Different measurement types");
     }
 
     private void validateTargetUnit(IMeasurable targetUnit) {
         if (targetUnit == null)
-            throw new IllegalArgumentException("Target unit must not be null");
-
-        if (targetUnit.getClass() != this.unit.getClass())
-            throw new IllegalArgumentException("Invalid target unit type");
+            throw new IllegalArgumentException("Target unit cannot be null");
+        if (targetUnit.getClass() != unit.getClass())
+            throw new IllegalArgumentException("Invalid target unit");
     }
 
     private void validateArithmeticSupport(IMeasurable unit) {
         if (!(unit instanceof SupportsArithmetic))
-            throw new UnsupportedOperationException(
-                    "Arithmetic not supported for: " + unit.getClass().getSimpleName());
+            throw new UnsupportedOperationException("Arithmetic not supported");
     }
 
     private double performArithmetic(Quantity<? extends IMeasurable> other,
-                                     ArithmeticOperation operation) {
+                                     ArithmeticOperation op) {
 
-        validateArithmeticSupport(this.unit);
+        validateArithmeticSupport(unit);
         validateArithmeticSupport(other.getUnit());
 
-        double baseThis = unit.convertToBaseUnit(value);
-        double baseOther = other.getUnit().convertToBaseUnit(other.getValue());
+        double base1 = unit.convertToBaseUnit(value);
+        double base2 = other.getUnit().convertToBaseUnit(other.getValue());
 
-        return operation.compute(baseThis, baseOther);
+        return op.compute(base1, base2);
     }
 
     private double round(double v) {

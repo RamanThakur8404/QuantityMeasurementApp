@@ -1,7 +1,8 @@
-package com.app.quantitymeasurement.dto;
+package com.app.quantitymeasurement.dto.request;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import com.app.quantitymeasurement.dto.response.QuantityDTO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,17 +12,17 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class QuantityInputDTO {
 
-    // first operand (required)
+    // First quantity (required)
     @NotNull(message = "thisQuantityDTO must not be null")
     @Valid
     private QuantityDTO thisQuantityDTO;
 
-    // second operand (required)
+    // Second quantity (required)
     @NotNull(message = "thatQuantityDTO must not be null")
     @Valid
     private QuantityDTO thatQuantityDTO;
 
-    // optional target unit
+    // Optional target unit for result
     @Valid
     private QuantityDTO targetUnitDTO;
 }

@@ -1,4 +1,4 @@
-package com.app.quantitymeasurement.dto;
+package com.app.quantitymeasurement.dto.request;
 
 import com.app.quantitymeasurement.entity.QuantityMeasurementEntity;
 import lombok.AllArgsConstructor;
@@ -15,30 +15,30 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class QuantityMeasurementDTO {
 
-    // -------- first operand --------
+    // First quantity
     private Double thisValue;
     private String thisUnit;
     private String thisMeasurementType;
 
-    // -------- second operand --------
+    // Second quantity
     private Double thatValue;
     private String thatUnit;
     private String thatMeasurementType;
 
-    // operation type
+    // Operation (compare, add, convert, etc.)
     private String operation;
 
-    // -------- result --------
+    // Result
     private String resultString; // for compare
-    private Double resultValue;
+    private Double resultValue;  // for calculations
     private String resultUnit;
     private String resultMeasurementType;
 
-    // -------- error --------
+    // Error info
     private String errorMessage;
     private boolean error;
 
-    // convert entity -> DTO
+    // Convert Entity → DTO
     public static QuantityMeasurementDTO fromEntity(QuantityMeasurementEntity entity) {
         if (entity == null) return null;
 
@@ -59,7 +59,7 @@ public class QuantityMeasurementDTO {
                 .build();
     }
 
-    // convert DTO -> entity
+    // Convert DTO → Entity
     public QuantityMeasurementEntity toEntity() {
         QuantityMeasurementEntity entity = new QuantityMeasurementEntity();
 
@@ -80,7 +80,7 @@ public class QuantityMeasurementDTO {
         return entity;
     }
 
-    // list entity -> DTO
+    // List<Entity> → List<DTO>
     public static List<QuantityMeasurementDTO> fromEntityList(List<QuantityMeasurementEntity> entities) {
         if (entities == null) return List.of();
 
@@ -89,7 +89,7 @@ public class QuantityMeasurementDTO {
                 .collect(Collectors.toList());
     }
 
-    // list DTO -> entity
+    // List<DTO> → List<Entity>
     public static List<QuantityMeasurementEntity> toEntityList(List<QuantityMeasurementDTO> dtos) {
         if (dtos == null) return List.of();
 

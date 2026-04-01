@@ -1,4 +1,4 @@
-package com.app.quantitymeasurement.dto;
+package com.app.quantitymeasurement.dto.response;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -10,13 +10,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class QuantityDTO {
 
-    // common interface for all units
+    // Interface for unit enums
     public interface IMeasurableUnit {
         String getUnitName();
         String getMeasurementType();
     }
 
-    // length units
+    // Length units
     public enum LengthUnit implements IMeasurableUnit {
         FEET, INCHES, YARDS, CENTIMETERS;
 
@@ -24,7 +24,7 @@ public class QuantityDTO {
         public String getMeasurementType() { return this.getClass().getSimpleName(); }
     }
 
-    // volume units
+    // Volume units
     public enum VolumeUnit implements IMeasurableUnit {
         LITRE, MILLILITRE, GALLON;
 
@@ -32,7 +32,7 @@ public class QuantityDTO {
         public String getMeasurementType() { return this.getClass().getSimpleName(); }
     }
 
-    // weight units
+    // Weight units
     public enum WeightUnit implements IMeasurableUnit {
         KILOGRAM, GRAM, POUND;
 
@@ -40,7 +40,7 @@ public class QuantityDTO {
         public String getMeasurementType() { return this.getClass().getSimpleName(); }
     }
 
-    // temperature units
+    // Temperature units
     public enum TemperatureUnit implements IMeasurableUnit {
         CELSIUS, FAHRENHEIT, KELVIN;
 
@@ -48,14 +48,15 @@ public class QuantityDTO {
         public String getMeasurementType() { return this.getClass().getSimpleName(); }
     }
 
-    // -------- fields --------
-
+    // Value of quantity
     @NotNull(message = "Value must not be null")
     private Double value;
 
+    // Unit name
     @NotEmpty(message = "Unit must not be empty")
     private String unit;
 
+    // Measurement type
     @NotEmpty(message = "Measurement type must not be empty")
     @Pattern(
         regexp = "LengthUnit|VolumeUnit|WeightUnit|TemperatureUnit",
@@ -63,29 +64,28 @@ public class QuantityDTO {
     )
     private String measurementType;
 
-    // -------- constructors --------
-
+    // Constructor using enum
     public QuantityDTO(double value, IMeasurableUnit unit) {
         this.value = value;
         this.unit = unit.getUnitName();
         this.measurementType = unit.getMeasurementType();
     }
 
+    // Constructor using strings
     public QuantityDTO(double value, String unit, String measurementType) {
         this.value = value;
         this.unit = unit;
         this.measurementType = measurementType;
     }
 
-    // return primitive value safely
+    // Safe getter
     public double getValue() {
         return value == null ? 0.0 : value;
     }
 
-    // validate unit with measurement type
+    // Validate unit matches type
     @jakarta.validation.constraints.AssertTrue(
-        message = "Unit must match measurement type"
-    )
+        message = "Unit must match measurement type")
     public boolean isUnitValidForMeasurementType() {
         if (unit == null || measurementType == null) return true;
 
@@ -98,12 +98,12 @@ public class QuantityDTO {
                 default: return false;
             }
             return true;
-        } catch (IllegalArgumentException e) {
+        } catch (Exception e) {
             return false;
         }
     }
 
-    // formatted output
+    // Format output
     @Override
     public String toString() {
         return String.format("%s %s",
